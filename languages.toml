@@ -1,0 +1,122 @@
+[defaults]
+license = "CC-BY-SA-4.0"
+
+[[language]]
+code = "en"
+name = "English"
+
+[[language]]
+code = "es"
+name = "Spanish"
+
+[[language]]
+code = "pt"
+name = "Portuguese"
+
+[[language]]
+code = "fr"
+name = "French"
+
+[[language]]
+code = "de"
+name = "German"
+
+[[language]]
+code = "it"
+name = "Italian"
+
+[[language]]
+code = "nl"
+name = "Dutch"
+
+[[language]]
+code = "sv"
+name = "Swedish"
+
+[[language]]
+code = "da"
+name = "Danish"
+
+[[language]]
+code = "nb"
+name = "Norwegian Bokmål"
+
+[[language]]
+code = "fi"
+name = "Finnish"
+
+[[language]]
+code = "pl"
+name = "Polish"
+
+[[language]]
+code = "cs"
+name = "Czech"
+
+[[language]]
+code = "ru"
+name = "Russian"
+
+[[language]]
+code = "uk"
+name = "Ukrainian"
+
+[[language]]
+code = "el"
+name = "Greek"
+
+[[language]]
+code = "tr"
+name = "Turkish"
+
+[[language]]
+code = "ro"
+name = "Romanian"
+
+[[language]]
+code = "hu"
+name = "Hungarian"
+
+[[language]]
+code = "ca"
+name = "Catalan"
+
+[[language]]
+code = "gl"
+name = "Galician"
+
+[[language]]
+code = "la"
+name = "Latin"
+
+[[language]]
+code = "eo"
+name = "Esperanto"
+
+[[language]]
+code = "cy"
+name = "Welsh"
+
+[[language]]
+code = "is"
+name = "Icelandic"
+
+[[language]]
+code = "ga"
+name = "Irish"
+
+[[language]]
+code = "lt"
+name = "Lithuanian"
+
+[[language]]
+code = "lv"
+name = "Latvian"
+
+[[language]]
+code = "et"
+name = "Estonian"
+
+[[language]]
+code = "eu"
+name = "Basque"

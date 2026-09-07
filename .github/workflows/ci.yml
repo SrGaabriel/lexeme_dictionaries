@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustc --version && cargo --version
+      - run: cargo build --release
+      - run: ./target/release/lexeme_dictionaries matrix | jq -e '.include | length > 0'
+
+  extractor:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+      - run: cargo build --release
+
+      - name: Compile Basque
+        run: |
+          set -euo pipefail
+          tool=./target/release/lexeme_dictionaries
+          url=$($tool url --name Basque)
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 10 \
+               --user-agent "lexeme-dictionaries (+https://github.com/${{ github.repository }})" \
+               "$url" \
+          | $tool build --lang eu --name Basque --source "$url" \
+              --min-entries 5000 \
+              --out dist/eu.lex.zst --stats dist/eu.stats.json
+          jq . dist/eu.stats.json
+
+      - name: Assert form coverage
+        run: |
+          set -euo pipefail
+          jq -e '.forms > 10000 and .pct_with_forms > 40 and .parse_errors == 0' dist/eu.stats.json
