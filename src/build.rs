@@ -33,7 +33,7 @@ pub struct Args {
     stats: Option<PathBuf>,
     #[arg(long, default_value = "CC-BY-SA-4.0")]
     license: String,
-    #[arg(long, default_value_t = 19)]
+    #[arg(long, default_value_t = 12)]
     level: i32,
     #[arg(long)]
     skip_multiword: bool,
