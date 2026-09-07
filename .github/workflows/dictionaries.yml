@@ -1,0 +1,136 @@
+name: dictionaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      languages:
+        required: false
+        default: ""
+      tag:
+        required: false
+        default: "dicts-v1"
+      publish:
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dictionaries-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      generated: ${{ steps.plan.outputs.generated }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: plan
+        run: |
+          set -euo pipefail
+          matrix=$(python3 dictionaries/plan.py matrix --only "${{ inputs.languages }}")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "generated=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "$matrix" | python3 -m json.tool
+
+  tool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustc --version && cargo --version
+      - run: cargo build --release --features dictgen --bin dictgen
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dictgen
+          path: target/release/dictgen
+          retention-days: 1
+
+  build:
+    needs: [plan, tool]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dictgen
+      - run: chmod +x dictgen
+
+      - name: Compile ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+               --retry 5 --retry-delay 15 --retry-all-errors \
+               --user-agent "lexeme-dictgen (+https://github.com/${{ github.repository }})" \
+               "${{ matrix.url }}" \
+          | ./dictgen \
+              --lang "${{ matrix.code }}" \
+              --name "${{ matrix.name }}" \
+              --source "${{ matrix.url }}" \
+              --license "${{ matrix.license }}" \
+              --generated "${{ needs.plan.outputs.generated }}" \
+              --out "dist/${{ matrix.code }}.lex.zst" \
+              --stats "dist/${{ matrix.code }}.stats.json"
+
+      - name: Check the build is usable
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF'
+          import json, sys
+          stats = json.load(open("dist/${{ matrix.code }}.stats.json"))
+          print(json.dumps(stats, indent=2, ensure_ascii=False))
+          if stats["entries"] < 500:
+              sys.exit(f"only {stats['entries']} entries — wrong source URL?")
+          if stats["parse_errors"] > stats["lines_read"] * 0.01:
+              sys.exit(f"{stats['parse_errors']} parse errors — upstream schema change?")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.code }}
+          path: dist/
+          retention-days: 7
+
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Assemble manifest
+        run: |
+          set -euo pipefail
+          python3 dictionaries/plan.py manifest \
+            --dist dist \
+            --tag "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --generated "${{ needs.plan.outputs.generated }}"
+          ls -lh dist/
+          cat dist/manifest.json
+
+      - name: Publish release assets
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag }}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "Dictionaries ($tag)" \
+              --notes-file dist/NOTICE.md
+          fi
+          gh release upload "$tag" dist/* --clobber
