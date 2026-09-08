@@ -227,8 +227,8 @@ pub fn run(args: &Args) -> io::Result<()> {
             if form.tags.iter().any(|t| JUNK_TAGS.contains(&t.as_str())) {
                 continue;
             }
-            let surface = form.form.trim();
-            if JUNK_FORMS.contains(&surface) || !is_clean(surface) {
+            let surface = strip_gloss(form.form.trim());
+            if JUNK_FORMS.contains(&surface) || !is_clean(surface) || is_prose(surface) {
                 continue;
             }
             if surface == raw.word && form.tags.is_empty() {
@@ -366,6 +366,17 @@ fn open_input(path: &Path) -> io::Result<Box<dyn BufRead>> {
     } else {
         Box::new(buf)
     })
+}
+
+fn strip_gloss(surface: &str) -> &str {
+    match surface.split_once(" # ") {
+        Some((head, _)) => head.trim_end(),
+        None => surface,
+    }
+}
+
+fn is_prose(surface: &str) -> bool {
+    surface.ends_with('.') && surface.split_whitespace().count() > 5
 }
 
 fn is_clean(s: &str) -> bool {
