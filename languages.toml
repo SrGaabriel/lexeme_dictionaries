@@ -114,6 +114,10 @@ code = "lv"
 name = "Latvian"
 
 [[language]]
+code = "sa"
+name "Sanskrit"
+
+[[language]]
 code = "et"
 name = "Estonian"
 
